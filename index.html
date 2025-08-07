@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Mô Phỏng Tương Quan & Hiệp Phương Sai</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: #f8f9fa;
+            color: #212529;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 350px;
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-radius: 0.75rem;
+        }
+        .interactive-chart-container {
+             cursor: crosshair;
+        }
+        .stat-card {
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 4px 12px -1px rgb(0 0 0 / 0.07);
+        }
+        .stat-card h3 {
+            font-weight: 500;
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+        .stat-card p {
+            font-weight: 700;
+            font-size: 2rem;
+            line-height: 1.2;
+        }
+        .stat-card.covariance p { color: #ae2012; }
+        .stat-card.correlation p { color: #005f73; }
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .btn-danger {
+            background-color: #d90429;
+            color: white;
+            border-color: #d90429;
+        }
+        .btn-danger:hover {
+            background-color: #ef233c;
+        }
+        .section-container {
+            background-color: #ffffff;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            margin-bottom: 2rem;
+            border: 1px solid #e9ecef;
+        }
+        .latex {
+            font-family: "Times New Roman", serif;
+            font-style: italic;
+        }
+        h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #001219;
+        }
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #003049;
+        }
+        #scatterChartCustom {
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto px-4 py-8 md:py-12">
+        
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-001219 mb-4">Trình Mô Phỏng Tương Quan Tương Tác</h1>
+            <p class="text-lg text-gray-600 max-w-3xl mx-auto">Khám phá các tính chất của Hiệp phương sai (Covariance) và Hệ số tương quan (Correlation) qua các ví dụ trực quan.</p>
+        </header>
+
+        <main>
+            <!-- Part 1: Base Data -->
+            <div class="section-container">
+                <h3>Phần 1: Dữ liệu gốc với Tương quan thuận</h3>
+                <p class="text-sm text-gray-600 mb-4">Đây là bộ dữ liệu ban đầu của chúng ta, thể hiện một mối tương quan thuận rõ ràng.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-2 chart-container">
+                        <canvas id="chartPart1"></canvas>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="stat-card covariance">
+                            <h3>Hiệp phương sai</h3>
+                            <p id="covPart1">0.00</p>
+                        </div>
+                        <div class="stat-card correlation">
+                            <h3>Hệ số tương quan (<span class="latex">r</span>)</h3>
+                            <p id="corrPart1">0.00</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Part 2: Scaled by Multiplication -->
+            <div class="section-container">
+                <h3>Phần 2: Ảnh hưởng của Phép nhân (Scaling)</h3>
+                <p class="text-sm text-gray-600 mb-4">Dữ liệu từ Phần 1 được biến đổi bằng cách nhân mỗi giá trị X với 2 và Y với 3. Hãy quan sát sự thay đổi.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-2 chart-container">
+                        <canvas id="chartPart2"></canvas>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="stat-card covariance">
+                            <h3>Hiệp phương sai</h3>
+                            <p id="covPart2">0.00</p>
+                        </div>
+                        <div class="stat-card correlation">
+                            <h3>Hệ số tương quan (<span class="latex">r</span>)</h3>
+                            <p id="corrPart2">0.00</p>
+                        </div>
+                        <div class="bg-amber-100 text-amber-800 p-3 rounded-lg text-sm">
+                            <strong>Quan sát:</strong> Hiệp phương sai tăng vọt, trong khi Hệ số tương quan gần như không đổi. Điều này chứng tỏ Correlation <strong>không nhạy cảm</strong> với việc thay đổi đơn vị đo (scaling).
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Part 3: Scaled by Addition -->
+            <div class="section-container">
+                <h3>Phần 3: Ảnh hưởng của Phép cộng (Translation)</h3>
+                <p class="text-sm text-gray-600 mb-4">Dữ liệu từ Phần 1 được dịch chuyển bằng cách cộng 20 vào mỗi giá trị X và 10 vào mỗi giá trị Y.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-2 chart-container">
+                        <canvas id="chartPart3"></canvas>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="stat-card covariance">
+                            <h3>Hiệp phương sai</h3>
+                            <p id="covPart3">0.00</p>
+                        </div>
+                        <div class="stat-card correlation">
+                            <h3>Hệ số tương quan (<span class="latex">r</span>)</h3>
+                            <p id="corrPart3">0.00</p>
+                        </div>
+                         <div class="bg-sky-100 text-sky-800 p-3 rounded-lg text-sm">
+                            <strong>Quan sát:</strong> Cả Hiệp phương sai và Hệ số tương quan đều không thay đổi. Cả hai thước đo đều <strong>bất biến</strong> với phép dịch chuyển dữ liệu.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Part 4: Custom Data -->
+            <div class="section-container">
+                <h3>Phần 4: Sân chơi Tương tác</h3>
+                <p class="text-sm text-gray-600 mb-4">Bây giờ đến lượt bạn! Nhấp chuột vào biểu đồ để thêm điểm, hoặc kéo thả các điểm đã có để xem các giá trị thay đổi như thế nào trong thời gian thực.</p>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2">
+                        <div class="chart-container interactive-chart-container" id="chartContainerCustom">
+                            <canvas id="scatterChartCustom"></canvas>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="stat-card covariance">
+                            <h3>Hiệp phương sai</h3>
+                            <p id="covarianceValueCustom">0.00</p>
+                        </div>
+                        <div class="stat-card correlation">
+                            <h3>Hệ số tương quan (<span class="latex">r</span>)</h3>
+                            <p id="correlationValueCustom">0.00</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border">
+                             <h4 class="font-bold text-md mb-2 text-center">Bảng điều khiển</h4>
+                             <p class="text-center mb-3">Số điểm dữ liệu: <strong id="pointCount" class="text-blue-600">0</strong></p>
+                            <div class="flex justify-center">
+                                <button id="clearDataBtn" class="btn btn-danger">Xóa toàn bộ</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // --- UTILITY FUNCTIONS ---
+            const getMean = (arr) => arr.length === 0 ? 0 : arr.reduce((a, b) => a + b, 0) / arr.length;
+
+            const getStats = (points) => {
+                if (points.length < 2) {
+                    return { covariance: 0, correlation: 0 };
+                }
+                const xValues = points.map(p => p.x);
+                const yValues = points.map(p => p.y);
+                const n = points.length;
+                const meanX = getMean(xValues);
+                const meanY = getMean(yValues);
+                let covariance = 0, stdDevX_sq = 0, stdDevY_sq = 0;
+                for (let i = 0; i < n; i++) {
+                    const dx = xValues[i] - meanX;
+                    const dy = yValues[i] - meanY;
+                    covariance += dx * dy;
+                    stdDevX_sq += dx * dx;
+                    stdDevY_sq += dy * dy;
+                }
+                covariance /= (n - 1);
+                const stdDevX = Math.sqrt(stdDevX_sq / (n - 1));
+                const stdDevY = Math.sqrt(stdDevY_sq / (n - 1));
+                const correlation = (stdDevX === 0 || stdDevY === 0) ? 0 : covariance / (stdDevX * stdDevY);
+                return { covariance, correlation };
+            };
+
+            const createScatterChart = (canvasId, data, options = {}) => {
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                const defaultOptions = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { type: 'linear', position: 'bottom' },
+                        y: { type: 'linear' }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    }
+                };
+                return new Chart(ctx, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            data: data,
+                            backgroundColor: 'rgba(0, 95, 115, 0.7)',
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                        }]
+                    },
+                    options: { ...defaultOptions, ...options }
+                });
+            };
+
+            // --- PART 1, 2, 3 SETUP ---
+            const baseData = [
+                {x: 10, y: 12}, {x: 15, y: 18}, {x: 22, y: 25}, {x: 28, y: 26},
+                {x: 35, y: 40}, {x: 40, y: 38}, {x: 48, y: 55}, {x: 55, y: 60}
+            ];
+
+            // Part 1
+            const stats1 = getStats(baseData);
+            document.getElementById('covPart1').textContent = stats1.covariance.toFixed(2);
+            document.getElementById('corrPart1').textContent = stats1.correlation.toFixed(2);
+            createScatterChart('chartPart1', baseData);
+
+            // Part 2
+            const scaledMulData = baseData.map(p => ({ x: p.x * 2, y: p.y * 3 }));
+            const stats2 = getStats(scaledMulData);
+            document.getElementById('covPart2').textContent = stats2.covariance.toFixed(2);
+            document.getElementById('corrPart2').textContent = stats2.correlation.toFixed(2);
+            createScatterChart('chartPart2', scaledMulData);
+
+            // Part 3
+            const scaledAddData = baseData.map(p => ({ x: p.x + 20, y: p.y + 10 }));
+            const stats3 = getStats(scaledAddData);
+            document.getElementById('covPart3').textContent = stats3.covariance.toFixed(2);
+            document.getElementById('corrPart3').textContent = stats3.correlation.toFixed(2);
+            createScatterChart('chartPart3', scaledAddData);
+
+            // --- PART 4: INTERACTIVE SETUP ---
+            const customCtx = document.getElementById('scatterChartCustom').getContext('2d');
+            const covElCustom = document.getElementById('covarianceValueCustom');
+            const corrElCustom = document.getElementById('correlationValueCustom');
+            const pointCountEl = document.getElementById('pointCount');
+            const clearDataBtn = document.getElementById('clearDataBtn');
+            let customDataPoints = [];
+            let customScatterChart;
+
+            const updateCustomUI = () => {
+                const { covariance, correlation } = getStats(customDataPoints);
+                covElCustom.textContent = covariance.toFixed(2);
+                corrElCustom.textContent = correlation.toFixed(2);
+                pointCountEl.textContent = customDataPoints.length;
+                if (customScatterChart) {
+                    customScatterChart.data.datasets[0].data = customDataPoints;
+                    customScatterChart.update();
+                }
+            };
+            
+            const createCustomChart = () => {
+                if (customScatterChart) customScatterChart.destroy();
+                customScatterChart = new Chart(customCtx, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: 'Dữ liệu',
+                            data: customDataPoints,
+                            backgroundColor: 'rgba(174, 32, 18, 0.7)',
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { type: 'linear', position: 'bottom', min: 0, max: 100 },
+                            y: { min: 0, max: 100 }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => `(X: ${context.raw.x.toFixed(1)}, Y: ${context.raw.y.toFixed(1)})`
+                                }
+                            },
+                            dragData: {
+                                round: 1,
+                                onDragEnd: (e, datasetIndex, index, value) => {
+                                    customDataPoints[index] = value;
+                                    updateCustomUI();
+                                }
+                            }
+                        }
+                    }
+                });
+            };
+
+            document.getElementById('chartContainerCustom').addEventListener('click', (e) => {
+                if (e.target.id !== 'scatterChartCustom') return;
+                const rect = customCtx.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const chartArea = customScatterChart.chartArea;
+                if (x >= chartArea.left && x <= chartArea.right && y >= chartArea.top && y <= chartArea.bottom) {
+                    const newPoint = {
+                        x: customScatterChart.scales.x.getValueForPixel(x),
+                        y: customScatterChart.scales.y.getValueForPixel(y)
+                    };
+                    customDataPoints.push(newPoint);
+                    updateCustomUI();
+                }
+            });
+
+            clearDataBtn.addEventListener('click', () => {
+                customDataPoints = [];
+                updateCustomUI();
+            });
+
+            createCustomChart();
+            updateCustomUI();
+        });
+    </script>
+</body>
+</html>
